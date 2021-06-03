@@ -44,6 +44,8 @@
 
 
 
+
+
 <!-- mathjax -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js" integrity="sha256-nvJJv9wWKEm88qvoQl9ekL2J+k/RWIsaSScxxlsrv8k=" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/config/TeX-AMS-MML_HTMLorMML.js" integrity="sha256-84DKXVJXs0/F8OTMzX4UR909+jtl4G7SPypPavF+GfA=" crossorigin="anonymous"></script>
@@ -55,9 +57,16 @@
 
 
 
+
+  
+
+  
+
   </head>
 
   <body data-spy="scroll" data-target="#toc">
+    
+
     <div class="container template-reference-index">
       <header>
       <div class="navbar navbar-default navbar-fixed-top" role="navigation">
@@ -91,7 +100,7 @@
       <a href="../articles/Diagnostics-for-VPA.html">VPAモデル診断スクリプト</a>
     </li>
     <li>
-      <a href="../articles/fittingSR.html">fitSR関数を再生産関係の推定</a>
+      <a href="../articles/fittingSR.html">fitSR関数を使った再生産関係の推定</a>
     </li>
     <li>
       <a href="../articles/vpa.html">VPA関数を使った資源量推定</a>
@@ -278,6 +287,12 @@
       </tr><tr>
         
         <td>
+          <p><code><a href="check_MSE_sd0.html">check_MSE_sd0()</a></code> </p>
+        </td>
+        <td><p>MSEの計算が正しいかを確認するための関数</p></td>
+      </tr><tr>
+        
+        <td>
           <p><code><a href="colorize_table.html">colorize_table()</a></code> </p>
         </td>
         <td><p>値の大小に応じて表の背景にグラデーションをつける</p></td>
@@ -323,6 +338,12 @@
           <p><code><a href="convert_faa_perSPR.html">convert_faa_perSPR()</a></code> </p>
         </td>
         <td><p>vpaデータ, 選択率の参照年1, 漁獲圧の参照年2を与えて、参照年2の漁獲圧のもとで参照年1の選択率となるF at ageを作成する関数。漁獲圧の変換は％SPR換算</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="convert_future_list_table.html">convert_future_list_table()</a></code> </p>
+        </td>
+        <td><p>future_vpaの結果オブジェクトのリストをtibble形式に変換する関数</p></td>
       </tr><tr>
         
         <td>
@@ -533,6 +554,12 @@
           <p><code><a href="make_future_data.html">make_future_data()</a></code> </p>
         </td>
         <td><p>future_vpaにインプットとして入れる将来予測の空のarrayを生成する関数</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="make_kobeII_table.html">make_kobeII_table()</a></code> </p>
+        </td>
+        <td><p>beta.simluationの結果などを読んで、kobeII talbeに整形する関数</p></td>
       </tr><tr>
         
         <td>
@@ -759,6 +786,18 @@ Pull data frame from list</p></td>
       </tr><tr>
         
         <td>
+          <p><code><a href="take_interval.html">take_interval()</a></code> </p>
+        </td>
+        <td><p>@export</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="test_sd0_future.html">test_sd0_future()</a></code> </p>
+        </td>
+        <td><p>将来予測においてFが非常に小さい場合には決定論的予測と確率論的予測の平均がほぼ一致するかを確認するための関数</p></td>
+      </tr><tr>
+        
+        <td>
           <p><code><a href="theme_SH.html">theme_SH()</a></code> </p>
         </td>
         <td><p>会議用の図のフォーマット</p></td>
@@ -774,6 +813,12 @@ Pull data frame from list</p></td>
           <p><code><a href="use_rvpa_tmb.html">use_rvpa_tmb()</a></code> </p>
         </td>
         <td><p>Ridge VPAの計算をTMBで実行するためにcppファイルのコンパイル等をする関数</p></td>
+      </tr><tr>
+        
+        <td>
+          <p><code><a href="validate_sr.html">validate_sr()</a></code> </p>
+        </td>
+        <td><p>再生産関係のパラメタが想定した形になっているかを確認</p></td>
       </tr><tr>
         
         <td>
@@ -795,11 +840,11 @@ Pull data frame from list</p></td>
 
       <footer>
       <div class="copyright">
-  <p>Developed by Momoko Ichinokawa, Akira Hayashi, Mitsuyo Miyagawa, Shin Fukui, Kohei Hamabe, Shota Nishijima, Hiroshi Okamura.</p>
+  <p><p>Developed by Momoko Ichinokawa, Akira Hayashi, Mitsuyo Miyagawa, Shin Fukui, Kohei Hamabe, Shota Nishijima, Hiroshi Okamura.</p></p>
 </div>
 
 <div class="pkgdown">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.6.1.9000.</p>
+  <p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 1.6.1.9001.</p></p>
 </div>
 
       </footer>
@@ -807,6 +852,8 @@ Pull data frame from list</p></td>
 
   
 
+
+  
 
   </body>
 </html>
