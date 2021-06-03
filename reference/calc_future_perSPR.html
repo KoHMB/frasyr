@@ -81,7 +81,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">frasyr</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">2.1.1.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">2.2.0.0</span>
       </span>
     </div>
 
@@ -136,9 +136,11 @@
     <div class="ref-usage sourceCode"><pre class='sourceCode r'><code><span class='fu'>calc_future_perSPR</span><span class='op'>(</span>
   fout <span class='op'>=</span> <span class='cn'>NULL</span>,
   res_vpa <span class='op'>=</span> <span class='cn'>NULL</span>,
+  biopar <span class='op'>=</span> <span class='cn'>NULL</span>,
   <span class='va'>Fvector</span>,
+  is_pope <span class='op'>=</span> <span class='cn'>NULL</span>,
+  plus_group <span class='op'>=</span> <span class='cn'>NULL</span>,
   Fmax <span class='op'>=</span> <span class='fl'>10</span>,
-  max.age <span class='op'>=</span> <span class='cn'>Inf</span>,
   target.col <span class='op'>=</span> <span class='cn'>NULL</span>,
   target.year <span class='op'>=</span> <span class='cn'>NULL</span>,
   SPRtarget <span class='op'>=</span> <span class='cn'>NULL</span>,
@@ -154,15 +156,19 @@
     </tr>
     <tr>
       <th>res_vpa</th>
-      <td><p>Popeの式を使うかどうかだけのために利用。実際、漁獲量は計算していないので、不要といえば不要。</p></td>
+      <td><p>Popeの式を使うかどうか、plus_groupの設定のために利用。実際、漁獲量は計算していないので、不要といえば不要。is_popleとplus_groupが設定されていてもこちらを優先する。</p></td>
     </tr>
     <tr>
       <th>Fvector</th>
       <td><p>Fのベクトル</p></td>
     </tr>
     <tr>
-      <th>max.age</th>
-      <td><p>SPR計算のときに考慮する最大年齢。デフォルトは無限大。</p></td>
+      <th>is_pope</th>
+      <td><p>res_vpaがない場合、popeの式を使うか</p></td>
+    </tr>
+    <tr>
+      <th>plus_group</th>
+      <td><p>es_vpaがない場合、プラスグループを考慮するか</p></td>
     </tr>
     <tr>
       <th>target.col</th>

@@ -33,7 +33,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">frasyr</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">2.1.1.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">2.2.0.0</span>
       </span>
     </div>
 
@@ -111,7 +111,6 @@
 <span class="co">#&gt; loading 'frasyr'</span>
 <span class="co">#&gt; Warning: replacing previous import 'magrittr::extract' by 'tidyr::extract' when</span>
 <span class="co">#&gt; loading 'frasyr'</span>
-<span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://testthat.r-lib.org" class="external-link">testthat</a></span><span class="op">)</span>
 <span class="va">caa</span>   <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/utils/read.table.html" class="external-link">read.csv</a></span><span class="op">(</span><span class="st">"https://raw.githubusercontent.com/ichimomo/frasyr/dev/data-raw/ex2_caa.csv"</span>,  row.names<span class="op">=</span><span class="fl">1</span><span class="op">)</span>
 <span class="va">waa</span>   <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/utils/read.table.html" class="external-link">read.csv</a></span><span class="op">(</span><span class="st">"https://raw.githubusercontent.com/ichimomo/frasyr/dev/data-raw/ex2_waa.csv"</span>,  row.names<span class="op">=</span><span class="fl">1</span><span class="op">)</span>
 <span class="va">maa</span>   <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/utils/read.table.html" class="external-link">read.csv</a></span><span class="op">(</span><span class="st">"https://raw.githubusercontent.com/ichimomo/frasyr/dev/data-raw/ex2_maa.csv"</span>,  row.names<span class="op">=</span><span class="fl">1</span><span class="op">)</span>
@@ -136,7 +135,8 @@
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="co">#out.vpa(res_vpa) # vpa.csvというファイルが作成されます。VPAの結果のグラフ出力となるvpa.pdfも出力されます。</span>
 <span class="va">res_vpa2</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/read.vpa.html">read.vpa</a></span><span class="op">(</span><span class="st">"https://raw.githubusercontent.com/ichimomo/frasyr/dev/data-raw/ex2_vpa.csv"</span><span class="op">)</span> <span class="co"># vpa.csvを編集後、read.vpa関数で読み込みます</span>
-<span class="co">#&gt; Pope is TRUE... OK? (mean difference= 0 )</span></code></pre></div>
+<span class="co">#&gt; Pope is TRUE... OK? (mean difference= 0 )</span>
+<span class="co">#&gt; Plus group is TRUE... OK?</span></code></pre></div>
 </div>
 </div>
 <div id="さまざまなvpaのデモ" class="section level1">

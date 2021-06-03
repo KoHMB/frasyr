@@ -64,7 +64,13 @@
     <loc>/reference/bootSR.plot.html</loc>
   </url>
   <url>
+    <loc>/reference/boot_steepness.html</loc>
+  </url>
+  <url>
     <loc>/reference/caa.est.mat.html</loc>
+  </url>
+  <url>
+    <loc>/reference/caa.est.mat_wrong.html</loc>
   </url>
   <url>
     <loc>/reference/calc.StdResid.html</loc>
@@ -97,6 +103,9 @@
     <loc>/reference/check_MSE_sd0.html</loc>
   </url>
   <url>
+    <loc>/reference/check_consistent_w.html</loc>
+  </url>
+  <url>
     <loc>/reference/colorize_table.html</loc>
   </url>
   <url>
@@ -113,6 +122,9 @@
   </url>
   <url>
     <loc>/reference/compare_kobeII.html</loc>
+  </url>
+  <url>
+    <loc>/reference/convert_Fvector.html</loc>
   </url>
   <url>
     <loc>/reference/convert_SR_tibble.html</loc>
@@ -139,6 +151,15 @@
     <loc>/reference/derive_RP_value.html</loc>
   </url>
   <url>
+    <loc>/reference/derive_biopar.html</loc>
+  </url>
+  <url>
+    <loc>/reference/derive_future_summary.html</loc>
+  </url>
+  <url>
+    <loc>/reference/detect_plus_group.html</loc>
+  </url>
+  <url>
     <loc>/reference/do_caaboot_vpa.html</loc>
   </url>
   <url>
@@ -155,6 +176,9 @@
   </url>
   <url>
     <loc>/reference/draw_SRline.html</loc>
+  </url>
+  <url>
+    <loc>/reference/est_MSYRP.html</loc>
   </url>
   <url>
     <loc>/reference/export_formattable.html</loc>
@@ -269,6 +293,9 @@
   </url>
   <url>
     <loc>/reference/plot_HCR_by_catch.html</loc>
+  </url>
+  <url>
+    <loc>/reference/plot_SR_AReffect.html</loc>
   </url>
   <url>
     <loc>/reference/plot_SRdata.html</loc>

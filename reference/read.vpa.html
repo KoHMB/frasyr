@@ -81,7 +81,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">frasyr</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">2.1.1.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">2.2.0.0</span>
       </span>
     </div>
 
@@ -144,8 +144,10 @@
   faa.label <span class='op'>=</span> <span class='st'>"fishing mortality at age"</span>,
   Fc.label <span class='op'>=</span> <span class='st'>"Current F"</span>,
   naa.label <span class='op'>=</span> <span class='st'>"numbers at age"</span>,
+  release.label <span class='op'>=</span> <span class='st'>"release dat"</span>,
   Blimit <span class='op'>=</span> <span class='cn'>NULL</span>,
   Pope <span class='op'>=</span> <span class='cn'>NULL</span>,
+  plus.group <span class='op'>=</span> <span class='cn'>NULL</span>,
   fc.year <span class='op'>=</span> <span class='cn'>NULL</span>
 <span class='op'>)</span></code></pre></div>
 
@@ -155,6 +157,18 @@
     <tr>
       <th>tfile</th>
       <td><p>資源計算結果がまとめられたcsvファイルの名前</p></td>
+    </tr>
+    <tr>
+      <th>release.label</th>
+      <td><p>放流データを読み込みたい場合。ここで指定したラベルをつけて、年齢を行、年を列とするデータを入れる（catch at ageと同じ構造だが、年齢は必要な年齢だけ取り出した形で良い）</p></td>
+    </tr>
+    <tr>
+      <th>Pope</th>
+      <td><p>VPA計算時にどっちを使っているかここで設定する（TRUE or FALSE）。デフォルトはNULLで、その場合にはcaa,faa,naaの関係から自動判別するが、自動判別の結果が出力されるので、それをみて正しく判断されているか確認してください。</p></td>
+    </tr>
+    <tr>
+      <th>plus.group</th>
+      <td><p>プラスグループを考慮するかどうか。こちらについても、NULLの場合にはfaaとnaaの関係から自動判別するが、結果を一応確認すること。</p></td>
     </tr>
     </table>
 
