@@ -6,7 +6,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>再生産関係をプロットする関数 — SRplot_gg • frasyr</title>
+<title>再生産関係をプロットする関数 — plot_SR • frasyr</title>
 
 
 <!-- jquery -->
@@ -39,7 +39,7 @@
 
 
 
-<meta property="og:title" content="再生産関係をプロットする関数 — SRplot_gg" />
+<meta property="og:title" content="再生産関係をプロットする関数 — plot_SR" />
 <meta property="og:description" content="再生産関係をプロットする関数" />
 
 
@@ -125,14 +125,28 @@
     <div class="page-header">
     <h1>再生産関係をプロットする関数</h1>
     
-    <div class="hidden name"><code>SRplot_gg.Rd</code></div>
+    <div class="hidden name"><code>plot_SR.Rd</code></div>
     </div>
 
     <div class="ref-description">
     <p>再生産関係をプロットする関数</p>
     </div>
 
-    <div class="ref-usage sourceCode"><pre class='sourceCode r'><code><span class='fu'>SRplot_gg</span><span class='op'>(</span><span class='va'>...</span><span class='op'>)</span></code></pre></div>
+    <div class="ref-usage sourceCode"><pre class='sourceCode r'><code><span class='fu'>plot_SR</span><span class='op'>(</span>
+  <span class='va'>SR_result</span>,
+  refs <span class='op'>=</span> <span class='cn'>NULL</span>,
+  xscale <span class='op'>=</span> <span class='fl'>1000</span>,
+  xlabel <span class='op'>=</span> <span class='st'>"千トン"</span>,
+  yscale <span class='op'>=</span> <span class='fl'>1</span>,
+  ylabel <span class='op'>=</span> <span class='st'>"尾"</span>,
+  labeling.year <span class='op'>=</span> <span class='cn'>NULL</span>,
+  add.info <span class='op'>=</span> <span class='cn'>TRUE</span>,
+  recruit_intercept <span class='op'>=</span> <span class='fl'>0</span>,
+  plot_CI <span class='op'>=</span> <span class='cn'>FALSE</span>,
+  CI <span class='op'>=</span> <span class='fl'>0.9</span>,
+  shape_custom <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='fl'>21</span>, <span class='fl'>3</span><span class='op'>)</span>,
+  add_graph <span class='op'>=</span> <span class='cn'>NULL</span>
+<span class='op'>)</span></code></pre></div>
 
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
     <table class="ref-arguments">

@@ -6,7 +6,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>VPAのレトロスペクティブ解析結果を自動生成する関数 — do_retrospective_vpa • frasyr</title>
+<title>VPAデータが1年分追加されたダミーデータを生成する — create_dummy_vpa • frasyr</title>
 
 
 <!-- jquery -->
@@ -39,8 +39,8 @@
 
 
 
-<meta property="og:title" content="VPAのレトロスペクティブ解析結果を自動生成する関数 — do_retrospective_vpa" />
-<meta property="og:description" content="VPAのレトロスペクティブ解析結果を自動生成する関数" />
+<meta property="og:title" content="VPAデータが1年分追加されたダミーデータを生成する — create_dummy_vpa" />
+<meta property="og:description" content="VPAデータが1年分追加されたダミーデータを生成する" />
 
 
 
@@ -123,89 +123,18 @@
 <div class="row">
   <div class="col-md-9 contents">
     <div class="page-header">
-    <h1>VPAのレトロスペクティブ解析結果を自動生成する関数</h1>
+    <h1>VPAデータが1年分追加されたダミーデータを生成する</h1>
     
-    <div class="hidden name"><code>do_retrospective_vpa.Rd</code></div>
+    <div class="hidden name"><code>create_dummy_vpa.Rd</code></div>
     </div>
 
     <div class="ref-description">
-    <p>VPAのレトロスペクティブ解析結果を自動生成する関数</p>
+    <p>VPAデータが1年分追加されたダミーデータを生成する</p>
     </div>
 
-    <div class="ref-usage sourceCode"><pre class='sourceCode r'><code><span class='fu'>do_retrospective_vpa</span><span class='op'>(</span>
-  <span class='va'>res</span>,
-  n_retro <span class='op'>=</span> <span class='fl'>5</span>,
-  b_reest <span class='op'>=</span> <span class='cn'>FALSE</span>,
-  what_plot <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='st'>"SSB"</span>, <span class='st'>"biomass"</span>, <span class='st'>"Recruitment"</span>, <span class='st'>"fish_number"</span>, <span class='st'>"fishing_mortality"</span><span class='op'>)</span>,
-  plot_year <span class='op'>=</span> <span class='cn'>NULL</span>,
-  ncol <span class='op'>=</span> <span class='fl'>3</span>,
-  remove_maxAgeF <span class='op'>=</span> <span class='cn'>FALSE</span>,
-  ssb_forecast <span class='op'>=</span> <span class='cn'>FALSE</span>,
-  res_step1 <span class='op'>=</span> <span class='cn'>NULL</span>,
-  scale_value <span class='op'>=</span> <span class='cn'>NULL</span>,
-  grid_add_ini <span class='op'>=</span> <span class='cn'>NULL</span>,
-  grid_init <span class='op'>=</span> <span class='cn'>NULL</span>
-<span class='op'>)</span></code></pre></div>
+    <div class="ref-usage sourceCode"><pre class='sourceCode r'><code><span class='fu'>create_dummy_vpa</span><span class='op'>(</span><span class='va'>res_vpa</span><span class='op'>)</span></code></pre></div>
 
-    <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
-    <table class="ref-arguments">
-    <colgroup><col class="name" /><col class="desc" /></colgroup>
-    <tr>
-      <th>res</th>
-      <td><p>VPAの結果のオブジェクト</p></td>
-    </tr>
-    <tr>
-      <th>n_retro</th>
-      <td><p>レトロスペクティブ解析でさかのぼる年数</p></td>
-    </tr>
-    <tr>
-      <th>b_reest</th>
-      <td><p>bをレトロスペクティブ解析中で再推定するか</p></td>
-    </tr>
-    <tr>
-      <th>what_plot</th>
-      <td><p>作図したい項目を選べる。<code>NULL</code>の場合、全て（SSB, biomass, U, catch, Recruitment, fish_number, fishing_mortality, weight, maturity, catch_number）をプロットする。</p></td>
-    </tr>
-    <tr>
-      <th>ncol</th>
-      <td><p>作図の列数。標準で5列なので、<code>what_plot</code>の数が5以下の場合は適宜変えた方がよい。</p></td>
-    </tr>
-    <tr>
-      <th>remove_maxAgeF</th>
-      <td><p>Mohn's rhoを計算する際に最高齢のFを除くか（alphaを仮定して計算していることが多いから）</p></td>
-    </tr>
-    <tr>
-      <th>ssb_forecast</th>
-      <td><p>Mohn's rhoを計算する際にSSBは1年後を計算するか(last.catch.zero=TRUEのときのみ有効)</p></td>
-    </tr>
-    <tr>
-      <th>res_step1</th>
-      <td><p>2段階法のレトロ解析をやる場合の1段階目の<code>vpa</code>オブジェクト</p></td>
-    </tr>
-    <tr>
-      <th>grid_add_ini</th>
-      <td><p><code>add.p.ini</code>をgridで変えて初期値を事前に探索する</p></td>
-    </tr>
-    <tr>
-      <th>grid_init</th>
-      <td><p><code>p.init</code>でgridを変えて初期値を事前に探索する</p></td>
-    </tr>
-    </table>
 
-    <h2 class="hasAnchor" id="value"><a class="anchor" href="#value"></a>Value</h2>
-
-    <p>返ってくる値:
-    <code>result</code> 感度分析の結果が<code>list</code>型式で得られる。
-    <code>mohn_rho</code>
-    <code>graph</code> 図が得られる。</p>
-    <h2 class="hasAnchor" id="see-also"><a class="anchor" href="#see-also"></a>See also</h2>
-
-    <div class='dont-index'><p>レトロスペクティブ解析について:  <code><a href='retro.est.html'>retro.est</a></code>
-作図について: <code><a href='plot_vpa.html'>plot_vpa</a></code>
-https://ichimomo.github.io/frasyr/articles/Diagnostics-for-VPA.html</p></div>
-    <h2 class="hasAnchor" id="author"><a class="anchor" href="#author"></a>Author</h2>
-
-    <p>濵邉昂平, 市野川桃子</p>
 
   </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">
