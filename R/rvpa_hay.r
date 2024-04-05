@@ -122,7 +122,6 @@ vpa.hay <- function(
     p.init=0.5
 ){
 
-  if(length(sigma.const)>length(unique(sigma.const))){print("Try again!: please set sigma.const as sigma.constraint in the argument.");stop()}
   if (isTRUE(tune) & is.null(index)) {print("Check!: There is no abundance index."); stop()}
 
   # inputデータをリスト化
