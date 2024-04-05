@@ -60,7 +60,7 @@ zc_expit <- function(x) 2/(1+exp(-x))-1
 #' 半期VPAによる資源計算を実施する
 #'
 #' @details
-#' 多くの引数は`vpa`関数と同じである。
+#' 多くの引数は`vpa`関数と同じである。`vpa`関数の修正が反映されない可能性があるので注意
 #'
 #' @return \code{outputs} 半期ごとの年齢別資源尾数や年齢別漁獲係数が格納されている
 #'
@@ -368,7 +368,6 @@ vpa.hay <- function(
 
       obj <- list(waa_new=waa_new, naa=naa, naa1=naa1, naa2=naa2, baa=baa, baa1=baa1, baa2=baa2, ssb=ssb, faa=faa, faa1=faa1, faa2=faa2, uaa1=uaa1, uaa2=uaa2, saa=saa, saa1=saa1, saa2=saa2)
     }
-    class(obj) <- "vpa.hay"
     return(obj)
   }
 
@@ -409,6 +408,7 @@ vpa.hay <- function(
   res$Fc.at.age <- apply(res$faa[,ncol(res$faa)-0:(con_fc-1),drop=FALSE],1,mean)
   res$zzz <- zzz
 
+  class(res) <- "vpa.hay"
   return(res)
 }
 
