@@ -1,5 +1,14 @@
-## Hanki VPA for Morita-san
-##
+#' csvデータを読み込んで半期vpa用のデータを作成する関数
+#'
+#' @param caa catch at age
+#' @param waa weight at age
+#' @param maa maturity at age
+#'
+#' @seealso [data.handler()]
+#'
+#' @encoding UTF-8
+#'
+#' @export
 
 data.handler.hay <- function(
     caa1,
@@ -43,17 +52,24 @@ data.handler.hay <- function(
   invisible(res)
 }
 
-sel.func <- function(faa, def="maxage") {
-  if(def=="maxage") saa <- apply(faa, 2, function(x) x/x[length(x[!is.na(x)])])
-  if(def=="max") saa <- apply(faa, 2, function(x) x/max(x,na.rm=TRUE))
-  if(def=="mean") saa <- apply(faa, 2, function(x) x/sum(x,na.rm=TRUE))
-
-  return(saa)
-}
 
 zc_logit <- function(x) -log(2/(1+x)-1)
 zc_expit <- function(x) 2/(1+exp(-x))-1
 
+
+#' 半期VPAによる資源計算を実施する
+#'
+#' @details
+#' 多くの引数は`vpa`関数と同じである。
+#'
+#' @return \code{outputs} 半期ごとの年齢別資源尾数や年齢別漁獲係数が格納されている
+#'
+#' @seealso [vpa()]
+#'
+#' @encoding UTF-8
+#'
+#' @export
+#'
 vpa.hay <- function(
     dat,  # data for vpa
     con_tf=3,  # constraint of terminal F
@@ -106,23 +122,13 @@ vpa.hay <- function(
     p.init=0.5
 ){
 
-  require(tidyverse)
+  if(length(sigma.const)>length(unique(sigma.const))){print("Try again!: please set sigma.const as sigma.constraint in the argument.");stop()}
+  if (isTRUE(tune) & is.null(index)) {print("Check!: There is no abundance index."); stop()}
 
   # inputデータをリスト化
-
   argname <- ls()  # 関数が呼び出されたばかりのときのls()は引数のみが入っている
   arglist <- lapply(argname,function(xx) eval(parse(text=xx)))
   names(arglist) <- argname
-
-  #
-
-  if (do_compile){
-    require(TMB)
-    compile("ar1.cpp")
-    dyn.load(dynlib("ar1"))
-  }
-
-  #
 
   caa1 <- dat$caa1
   caa2 <- dat$caa2
@@ -363,7 +369,7 @@ vpa.hay <- function(
 
       obj <- list(waa_new=waa_new, naa=naa, naa1=naa1, naa2=naa2, baa=baa, baa1=baa1, baa2=baa2, ssb=ssb, faa=faa, faa1=faa1, faa2=faa2, uaa1=uaa1, uaa2=uaa2, saa=saa, saa1=saa1, saa2=saa2)
     }
-
+    class(obj) <- "vpa.hay"
     return(obj)
   }
 
@@ -407,20 +413,19 @@ vpa.hay <- function(
   return(res)
 }
 
-zenki <- function(res){
-  caa1 <- res$input$dat$caa1
-  caa2 <- res$input$dat$caa2
 
-  naa1 <- res$outputs$naa1
-  naa2 <- res$outputs$naa2
-  M <- res$input$dat$M
-
-  faa <- -log(1-(caa1*exp(M/4)+caa2*exp(3/4*M))/naa1)
-
-  colnames(faa) <- colnames(naa1)
-
-  list(naa=naa1,faa=faa)
-}
+#' 半期VPAによるレトロスペクティブ解析を行う関数
+#'
+#' @details
+#' 多くの引数は`retro.est`関数と同じである。
+#'
+#'
+#' @seealso [retro.est()]
+#'
+#' @encoding UTF-8
+#'
+#' @export
+#'
 
 hretro_est <- function(res,n=5,b_fix=TRUE,rho_fix=TRUE){
   res.c <- res
@@ -478,6 +483,15 @@ hretro_est <- function(res,n=5,b_fix=TRUE,rho_fix=TRUE){
   list(Res=Res, retro_res=retro_res, mohn=colMeans(retro_res))
 }
 
+
+#' 選択率制約がうまく行っている事を確認する関数
+#'
+#' @details
+#' 半期VPAのスクリプトにあった関数。
+#'
+#' @encoding UTF-8
+#' @export
+
 sel_const_check <- function(res){
   faa2 <- res$outputs$faa2
 
@@ -493,135 +507,14 @@ sel_const_check <- function(res){
   list(faa_target=target, faa_terminal=faa2[,nc], percent_relative_bias=relative_bias)
 }
 
-hvpa_plot <- function(res,res0=NULL,years=NULL,age=NULL,rel_heights=c(0.7,0.3),labels=c("Abundance","Fishing Rate")){
-  require(tidyverse)
 
-  if (is.null(age)) age <- 0:4
-
-  dat <- res$input$dat
-
-  caa1 <- dat$caa1
-  caa2 <- dat$caa2
-  naa1 <- res$outputs$naa1
-  naa2 <- res$outputs$naa2
-
-  if (!is.null(age)){
-    Age <- age+1
-    caa1 <- caa1[Age,,drop=FALSE]
-    caa2 <- caa2[Age,,drop=FALSE]
-    naa1 <- naa1[Age,,drop=FALSE]
-    naa2 <- naa2[Age,,drop=FALSE]
-  }
-
-  caa_all <- rbind(cbind(caa1,caa2),rep(1:ncol(caa1),2))
-
-  caa <- caa_all[1:nrow(caa1),order(caa_all[nrow(caa_all),])]
-
-  naa_all <- rbind(cbind(naa1,naa2),rep(1:ncol(naa1),2))
-
-  naa <- naa_all[1:nrow(naa1),order(naa_all[nrow(naa_all),])]
-
-  if (is.null(res0)){
-
-    data_for_plot <- data.frame(year=rep(colnames(caa1),each=nrow(caa1)*2),season=rep(c(rep(1,nrow(caa1)),rep(2,nrow(caa1))),ncol(caa1)),age=rep(age,2*ncol(caa1)),caa=as.numeric(unlist(caa)),naa=as.numeric(unlist(naa)))
-
-    data_for_plot <- data_for_plot %>% mutate(ys=as.Date(if_else(season==1,paste0(year,"-01-01"),paste0(year,"-06-01"))))
-
-    data_for_plot2 <- data_for_plot %>% group_by(year,season) %>% summarize(C=sum(caa),N=sum(naa),ys=mean(ys))
-  } else {
-    naa01 <- res0$outputs$naa1
-    naa02 <- res0$outputs$naa2
-
-    if (!is.null(age)){
-      naa01 <- naa01[Age,,drop=FALSE]
-      naa02 <- naa02[Age,,drop=FALSE]
-    }
-
-    naa0_all <- rbind(cbind(naa01,naa02),rep(1:ncol(naa01),2))
-
-    naa0 <- naa0_all[1:nrow(naa01),order(naa0_all[nrow(naa0_all),])]
-
-    data_for_plot <- data.frame(year=rep(colnames(caa1),each=nrow(caa1)*2),season=rep(c(rep(1,nrow(caa1)),rep(2,nrow(caa1))),ncol(caa1)),age=rep(age,2*ncol(caa1)),caa=as.numeric(unlist(caa)),naa=as.numeric(unlist(naa)),naa0=as.numeric(unlist(naa0)))
-
-    data_for_plot <- data_for_plot %>% mutate(ys=as.Date(if_else(season==1,paste0(year,"-01-01"),paste0(year,"-06-01"))))
-
-    data_for_plot2 <- data_for_plot %>% group_by(year,season) %>% summarize(C=sum(caa),N=sum(naa),N0=sum(naa0),ys=mean(ys))
-  }
-
-  if (!is.null(years)) data_for_plot2 <- subset(data_for_plot2, year %in% years)
-
-  p <- ggplot(data_for_plot2, mapping=aes(x=ys, y=N))
-
-  p1 <- p + geom_line(size=2)+labs(x="Year", y=labels[1])+theme_bw()
-
-  if (!is.null(res0)) p1 <- p1 + geom_line(aes(x=ys, y=N0),size=1,color="blue",linetype="twodash")
-
-  pp <- ggplot(data_for_plot2, mapping=aes(x=ys, y=C/N))
-
-  pp1 <- pp + geom_line(size=2, color="red")+labs(x="Year", y=labels[2])+theme_bw()
-
-  if (!is.null(res0)) pp1 <- pp1 + geom_line(aes(x=ys, y=C/N0),size=1, color="green",linetype="twodash")
-
-  cowplot::plot_grid(p1, pp1, nrow=2, rel_heights=rel_heights,align="v")
-}
-
-hvpa_plot2 <- function(res,res0=NULL,years=NULL,age=NULL,rel_heights=c(0.7,0.3),labels=c("Abundance","Fishing Rate")){
-  require(tidyverse)
-
-  if (is.null(age)) age <- 0:4
-
-  dat <- res$input$dat
-
-  caa1 <- dat$caa1
-  caa2 <- dat$caa2
-  naa1 <- res$outputs$naa1
-  naa2 <- res$outputs$naa2
-
-  if (!is.null(age)){
-    Age <- age+1
-    caa1 <- caa1[Age,,drop=FALSE]
-    caa2 <- caa2[Age,,drop=FALSE]
-    naa1 <- naa1[Age,,drop=FALSE]
-    naa2 <- naa2[Age,,drop=FALSE]
-  }
-
-  if (is.null(res0)){
-
-    data_for_plot <- data.frame(year=rep(colnames(caa1),each=nrow(caa1)),season=rep(c(rep(1,nrow(caa1))),ncol(caa1)),age=rep(age,ncol(caa1)),caa=as.numeric(unlist(caa1+caa2)),naa=as.numeric(unlist(naa1)))
-
-    data_for_plot <- data_for_plot %>% mutate(ys=as.Date(paste0(year,"-01-01")))
-
-    data_for_plot2 <- data_for_plot %>% group_by(year,season) %>% summarize(C=sum(caa),N=sum(naa),ys=mean(ys))
-  } else {
-    naa01 <- res0$naa
-
-    if (!is.null(age)){
-      naa01 <- naa01[Age,,drop=FALSE]
-    }
-
-    data_for_plot <- data.frame(year=rep(colnames(caa1),each=nrow(caa1)),season=rep(c(rep(1,nrow(caa1))),ncol(caa1)),age=rep(age,ncol(caa1)),caa=as.numeric(unlist(caa1+caa2)),naa=as.numeric(unlist(naa1)),naa0=as.numeric(unlist(naa01)))
-
-    data_for_plot <- data_for_plot %>% mutate(ys=as.Date(paste0(year,"-01-01")))
-
-    data_for_plot2 <- data_for_plot %>% group_by(year,season) %>% summarize(C=sum(caa),N=sum(naa),N0=sum(naa0),ys=mean(ys))
-  }
-
-  if (!is.null(years)) data_for_plot2 <- subset(data_for_plot2, year %in% years)
-
-  p <- ggplot(data_for_plot2, mapping=aes(x=ys, y=N))
-
-  p1 <- p + geom_line(size=2)+labs(x="Year", y=labels[1])+theme_bw()
-
-  if (!is.null(res0)) p1 <- p1 + geom_line(aes(x=ys, y=N0),size=1,color="blue",linetype="twodash")
-
-  pp <- ggplot(data_for_plot2, mapping=aes(x=ys, y=C/N))
-
-  pp1 <- pp + geom_line(size=2, color="red")+labs(x="Year", y=labels[2])+theme_bw()
-
-  if (!is.null(res0)) pp1 <- pp1 + geom_line(aes(x=ys, y=C/N0),size=1, color="green",linetype="twodash")
-
-  cowplot::plot_grid(p1, pp1, nrow=2, rel_heights=rel_heights,align="v")
-}
+#' 半期VPAのレトロスペクティブ解析結果の作図関数
+#'
+#' @details
+#' 半期VPAのスクリプトにあった関数。将来的にはdo_retrospective_vpa関数に移行したいが、こちらのフォーマットの方がクリアで分かりやすい気もする。
+#'
+#' @encoding UTF-8
+#' @export
 
 hretro_plot <- function(
     res,
@@ -690,126 +583,14 @@ hretro_plot <- function(
   if (out=="dat") return(list(dat=dat1,mohn=mohn_rho)) else return(p1)
 }
 
-make_dat <- function(res){
-  require(tidyverse)
 
-  AR <- res$input$AR
-
-  abund <- res$input$abund
-  index <- res$input$dat$index
-  use.index <- res$input$use.index
-  if (use.index[1] != "all") index <- index[use.index,]
-  ki <- res$input$ki
-  sel.def <- res$input$sel.def
-  min.age <- res$input$min.age+1
-  max.age <- res$input$max.age+1
-  b_est <- res$input$b_est
-  if (length(abund) > 1 & length(b_est)==1) b_est <- rep(b_est, length(abund))
-  p_slide <- res$input$p_slide
-  if (length(abund) > 1 & length(p_slide)==1) p_slide <- rep(p_slide, length(abund))
-
-  waa1 <- res$input$dat$waa1
-  waa2 <- res$input$dat$waa2
-  omega1 <- res$input$dat$omega1
-  omega2 <- res$input$dat$omega2
-  M <- res$input$dat$M
-
-  wf <- res$input$wf
-  scale <- res$input$scale
-
-  faa1 <- res$outputs$faa1
-  faa2 <- res$outputs$faa2
-  naa1 <- res$outputs$naa1
-  naa2 <- res$outputs$naa2
-  baa1 <- res$outputs$baa1
-  baa2 <- res$outputs$baa2
-
-  b <- res$opts$b
-  q <- res$opts$q
-  d <- res$opts$d
-
-  X_q <- res$X_q
-
-  zzz <- res$zzz
-
-  avail <- list()
-  for (i in 1:nrow(index)){
-    avail[[i]] <- which(!is.na(as.numeric(index[i,])))
-  }
-
-  waa_new <- res$outputs$waa_new
-
-  dat_for_plot <- NULL
-
-  for (i in 1:nrow(index)){
-    if (abund[i]=="Bo"){
-      if (ki[i]==1){
-        saa_o1 <- sel.func(zzz*faa1*omega1, def=sel.def)
-        saa_o1 <- sweep(saa_o1,2,colSums(saa_o1),FUN="/")
-        pred <- colSums((saa_o1*baa1)[min.age[i]:max.age[i],,drop=FALSE])
-      }
-      if (ki[i]==2){
-        saa_o2 <- sel.func(zzz*faa2*omega2, def=sel.def)
-        saa_o2 <- sweep(saa_o2,2,colSums(saa_o2),FUN="/")
-        pred <- colSums((saa_o2*baa2)[min.age[i]:max.age[i],,drop=FALSE])
-      }
-    }
-    if (abund[i]=="N"){
-      if (ki[i]==1){
-        pred <- colSums((naa1*exp(-p_slide[i]*(faa1+0.5*M)))[min.age[i]:max.age[i],,drop=FALSE])
-      }
-      if (ki[i]==2){
-        pred <- colSums((naa2*exp(-p_slide[i]*(faa2+0.5*M)))[min.age[i]:max.age[i],,drop=FALSE])
-      }
-    }
-    if (abund[i]=="B"){
-      if (ki[i]==1){
-        pred <- colSums((baa1*exp(-p_slide[i]*(faa1+0.5*M)))[min.age[i]:max.age[i],,drop=FALSE])
-      }
-      if (ki[i]==2){
-        pred <- colSums((baa2*exp(-p_slide[i]*(faa2+0.5*M)))[min.age[i]:max.age[i],,drop=FALSE])
-      }
-    }
-    if (abund[i]=="Bf"){
-      pred <- colSums((baa1)[min.age[i]:max.age[i],,drop=FALSE])
-      pred_new <- (naa2[,ncol(naa2)]*exp(-1*(faa2[,ncol(naa2)]+0.5*dat$M[,ncol(naa2)])))
-      pred_new <- sum((waa_new*c(0,pred_new[1:(nrow(naa2)-2)],sum(pred_new[(nrow(naa2)-1):nrow(naa2)])))[min.age[i]:max.age[i]])
-
-      pred <- c(pred[-1],pred_new)
-    }
-    if (abund[i]=="Nf"){
-      pred <- colSums((baa1)[min.age[i]:max.age[i],,drop=FALSE])
-      pred_new <- (naa2[,ncol(naa2)]*exp(-1*(faa2[,ncol(naa2)]+0.5*dat$M[,ncol(naa2)])))
-      pred_new <- sum((c(0,pred_new[1:(nrow(naa2)-2)],sum(pred_new[(nrow(naa2)-1):nrow(naa2)])))[min.age[i]:max.age[i]])
-
-      pred <- c(pred[-1],pred_new)
-    }
-
-    pred <- log(q[i])+d[i]*as.numeric(X_q[i,avail[[i]]])+b[i]*log(as.numeric(pred[avail[[i]]]))
-
-    obs <- as.numeric(index[i,avail[[i]]])
-
-    dat_for_plot <- rbind(dat_for_plot, data.frame(year=as.numeric(names(index)[avail[[i]]]),num=i,obs=obs,pred=exp(pred)))
-  }
-
-  if (any(AR)) {
-    rho <- res$opts$rho
-    resid <- NULL
-    for (j in 1:nrow(index)){
-      dat_for_plot_sub <- subset(dat_for_plot, num==j)
-      n <- nrow(dat_for_plot_sub)
-      resid <- c(resid,log(dat_for_plot_sub$obs[1])-log(dat_for_plot_sub$pred[1]))
-      eps <- last(resid)
-      for (i in 2:n){
-        resid <- c(resid,log(dat_for_plot_sub$obs[i])-log(dat_for_plot_sub$pred[i])-rho[j]*eps)
-        eps <- log(dat_for_plot_sub$obs[i])-log(dat_for_plot_sub$pred[i])
-      }
-    }
-    dat_for_plot$residuals <- resid
-  } else dat_for_plot$residuals <- log(dat_for_plot$obs)-log(dat_for_plot$pred)
-
-  return(dat_for_plot)
-}
+#' 半期VPAの残差プロットの作図関数
+#'
+#' @details
+#' 半期VPAのスクリプトにあった関数。資源量と指数の非線形性の作図がない。将来的にはplot_residual_vpa関数に移行したい。
+#'
+#' @encoding UTF-8
+#' @export
 
 residual_plot <- function(
     res,
@@ -843,344 +624,14 @@ residual_plot <- function(
   } else return(cowplot::plot_grid(p1, p3, nrow=2, rel_heights=rel_heights,align="v"))
 }
 
-bubble_plot <- function(
-    res,
-    target="naa",
-    season=1,
-    hanki=TRUE,
-    years=NULL,
-    scale=100,
-    fix_ratio=2,
-    range=seq(0,100,len=5),
-    digits=0,
-    max_size=10
-){
 
-  if (hanki) res00 <- res$outputs else res00 <- res
-  dat <- res00[names(res00)==paste0(target,season)]
-
-  dat <- dat[[1]] %>% as.data.frame() %>% tibble::rownames_to_column("age") %>% pivot_longer(!age, names_to = "year", values_to = "value") %>% mutate_at(vars(year), as.factor)
-
-  dat <- dat %>% mutate_at(vars(age), as.factor)
-  dat$age <- factor(dat$age, levels=rev(levels(dat$age)))
-
-  range <- range[1:(length(range)-1)]
-
-  if(!is.null(years)) dat <- subset(dat, year %in% years)
-
-  ggplot(dat,aes(x=year, y=age)) + geom_point(aes(size=value, fill=age, color=age), alpha = 0.75, shape = 21) + coord_fixed(ratio=fix_ratio) + scale_size_continuous(limits = c(0.0001, 1.0001)*max(dat$value,na.rm=TRUE), range = c(1,max_size), breaks = round(range*max(dat$value,na.rm=TRUE)/scale,digits=digits))+theme_bw() + theme(axis.text.x = element_text(angle = 90, hjust = 1), panel.background = element_blank(), panel.border = element_rect(colour = "black", fill = NA, size = 1.2)) + labs(x="Year", y="Age",size=paste0(target,season)) + guides(color="none", fill="none")
-}
-
-future_projection <- function(
-    res,
-    sr,
-    Y=20,
-    beta=1,
-    scale=1000){
-
-  faa1 <- res$outputs$faa1
-  faa2 <- res$outputs$faa2
-
-  nc <- ncol(faa1)
-
-  faa1_current <- faa1[,nc]
-  faa2_current <- faa2[,nc]
-
-  caa1 <- res$input$dat$caa1
-  caa2 <- res$input$dat$caa2
-  naa1 <- res$outputs$naa1
-  naa2 <- res$outputs$naa2
-  maa <- res$input$dat$maa
-  waa1 <- res$input$dat$waa1/scale
-  waa2 <- res$input$dat$waa2/scale
-  SSB <- res$outputs$ssb
-  M <- res$input$dat$M
-  ssb_type <- res$input$ssb_type
-  p_ssb <- res$input$p_ssb
-  M <- M[,nc]
-
-  faaz_current <- -log(1-(caa1[,nc]*exp(M/4)+caa2[,nc]*exp(3/4*M))/naa1[,nc])
-
-  a <- SR$pars[1]
-  b <- SR$pars[2]
-  SRtype <- SR$input$SR
-
-  pred_SR <- function(SSB,SRtype="HS"){
-    if (SRtype=="HS") out <- as.numeric(a*min(b,colSums(SSB)))
-    if (SRtype=="BH") out <- as.numeric(a*SSB/(1+b*SSB))
-    if (SRtype=="RI") out <- as.numeric(a*SSB*exp(-b*SSB))
-
-    return(out)
-  }
-
-  nage <- nrow(naa1)
-
-  Naa1 <- c(pred_SR(SSB,SRtype=SRtype),naa2[,nc]*exp(-faa2[,nc]-M/2))
-  Naa1[nage] <- sum(Naa1[nage:(nage+1)])
-  naa1_f <- as.matrix(Naa1[1:nage],ncol=1)
-  caa1_f <- caa2_f <- naa2_f <- NULL
-
-  Naaz <- Naa1
-  naaz_f <- naa1_f
-  caaz_f <- NULL
-
-  for (i in 1:Y){
-    Naa2 <- naa1_f[,i]*exp(-beta*faa1_current-M/2)
-    Caa1 <- naa1_f[,i]*exp(-M/4)*(1-exp(-beta*faa1_current))
-    naa2_f <- cbind(naa2_f,Naa2)
-    caa1_f <- cbind(caa1_f,Caa1)
-    if (ssb_type==1) {
-      SSB <- Naa1*maa*waa2
-      SSBz <- Naaz*maa*waa2
-    }
-    if (ssb_type==2) {
-      SSB <- Naa2*maa_ssb*waa_ssb*exp(-p_ssb*M)
-      SSBz <- Naaz*maa_ssb*waa_ssb*exp(-p_ssb*M)
-    }
-    if (ssb_type==3) {
-      SSB <- Naa2*maa*waa2*exp(-beta*faa2_current-0.5*M)
-      SSBz <- Naaz*maa*waa2*exp(-beta*faaz_current-M)
-    }
-    Naa1 <- c(pred_SR(SSB,SRtype=SRtype),naa2_f[,i]*exp(-beta*faa2_current-M/2))
-    Naa1[nage] <- sum(Naa1[nage:(nage+1)])
-    Naa1 <- Naa1[1:nage]
-    Caa2 <- naa2_f[,i]*exp(-M/4)*(1-exp(-beta*faa2_current))
-    naa1_f <- cbind(naa1_f,Naa1)
-    caa2_f <- cbind(caa2_f,Caa2)
-
-    Naaz <- c(pred_SR(SSBz,SRtype=SRtype),naaz_f[,i]*exp(-beta*faaz_current-M))
-    Naaz[nage] <- sum(Naaz[nage:(nage+1)])
-    Naaz <- Naaz[1:nage]
-    Caaz <- naaz_f[,i]*exp(-M/2)*(1-exp(-beta*faaz_current))
-
-    naaz_f <- cbind(naaz_f, Naaz)
-    caaz_f <- cbind(caaz_f,Caaz)
-  }
-
-  naa1_f <- naa1_f[,1:Y]
-  naaz_f <- naaz_f[,1:Y]
-
-  years <- as.numeric(colnames(naa1)[nc])+1:Y
-
-  colnames(naa1_f) <- colnames(naa2_f) <- colnames(naaz_f) <- colnames(caa1_f) <- colnames(caa2_f) <- colnames(caaz_f) <- years
-
-  list(faa1_current=faa1_current,faa2_current=faa2_current,faaz_current=faaz_current,naa1_f=naa1_f, naa2_f=naa2_f, caa1_f=caa1_f, caa2_f=caa2_f, caa12_f=caa1_f+caa2_f, naaz_f=naaz_f, caaz_f=caaz_f)
-}
-
-jackknife_test <- function(res){
-  index <- res$input$dat$index
-  use.index <- res$input$use.index
-  if (use.index[1] != "all") index <- index[use.index,]
-
-  res.c <- res
-
-  ResJ <- list()
-
-  k <- 1
-
-  for (i in 1:nrow(index)){
-    for (j in 1:ncol(index)){
-      if (!is.na(index[i,j])){
-        res.c$input$dat$index[use.index[i],j] <- NA
-        res11 <- do.call(vpa.hay,res.c$input)
-
-        ResJ[[k]] <- res11
-        k <- k + 1
-        res.c <- res
-      }
-    }
-  }
-
-  list(res=res,ResJ=ResJ)
-}
-
-jackknife_plot <- function(
-    jack_res,
-    target="naa",
-    age=0,
-    season=1,
-    num_id=1,
-    year=2022,
-    years=2005:2022,
-    scale=100,
-    fix_ratio=2,
-    range=seq(0,100,len=5),
-    digits=1,
-    absolute=FALSE,
-    max_value=NULL,
-    max_size=10
-){
-  res <- jack_res$res
-
-  index <- res$input$dat$index
-  use.index <- res$input$use.index
-  if (use.index[1] != "all") index <- index[use.index,]
-
-  impact <- index
-
-  Years <- as.numeric(colnames(index))
-  Ages <- 1:nrow(res$outputs$naa1)-1
-
-  k <- 1
-
-  for (i in 1:nrow(index)){
-    for (j in 1:ncol(index)){
-      if (!is.na(index[i,j])){
-        if (target=="b" | target=="q" | target=="sigma"){
-          resJ <- jack_res$ResJ[[k]]$opts
-          resJ <- resJ[names(resJ)==paste0(target)]
-          impact[i,j] <- (resJ[[1]])[num_id]
-        } else {
-          resJ <- jack_res$ResJ[[k]]$outputs
-          resJ <- resJ[names(resJ)==paste0(target,season)]
-          impact[i,j] <- (resJ[[1]])[Ages %in% age, Years %in% year]
-        }
-
-        k <- k + 1
-      }
-    }
-  }
-
-  dat <- impact %>% as.data.frame() %>% tibble::rownames_to_column("index") %>% pivot_longer(!index, names_to = "year", values_to = "value") %>% mutate_at(vars(year), as.factor)
-
-  dat <- dat %>% mutate_at(vars(index), as.factor)
-  dat$index <- factor(dat$index, levels=rev(levels(dat$index)))
-
-  range <- range[1:(length(range)-1)]
-
-  dat <- subset(dat, year %in% years)
-
-  colours <- c("blue","red")
-
-  if(is.null(max_value)) max_value <- max(abs(dat$value),na.rm=TRUE)
-
-  if (target=="b" | target=="q" | target=="sigma") {
-    Title <- paste0("target = ",target, ", index = ",num_id)
-    season <- NULL
-    threshold <- ((res$opts)[names(res$opts)==paste0(target)][[1]])[num_id]
-  } else {
-    Title <- paste0("target = ",target, ", season = ",season, ", age = ", age, ", year = ", year)
-    threshold <- ((res$outputs)[names(res$outputs)==paste0(target,season)][[1]])[Ages %in% age, Years %in% year]
-  }
-
-  ggplot(dat,aes(x=year, y=index)) + geom_point(aes(size=abs(value)), fill=colours[(dat$value > threshold)*0.5+1.5], color=colours[(dat$value > threshold)*0.5+1.5], alpha = 0.75, shape = 21) + coord_fixed(ratio=fix_ratio) + scale_size_continuous(limits = c(0.0001, 1.0001)*max_value, range = c(1,max_size), breaks = round(range*max_value/scale,digits=digits))+theme_bw() + theme(axis.text.x = element_text(angle = 90, hjust = 1), panel.background = element_blank(), panel.border = element_rect(colour = "black", fill = NA, size = 1.2)) + labs(x="Year", y="Index", size=paste0(target,season),title=Title) + guides(color="none", fill="none")
-}
-
-sensitivity_test <- function(res,Delta=2,SD=NULL){
-  index <- res$input$dat$index
-  use.index <- res$input$use.index
-  if (use.index[1] != "all") index <- index[use.index,]
-
-  sigma <- res$opts$sigma
-  if(!is.null(SD)) sigma <- rep(SD,length(sigma))
-
-  res.c <- res
-
-  ResP <- ResN <- list()
-
-  k <- 1
-
-  for (i in 1:nrow(index)){
-    for (j in 1:ncol(index)){
-      if (!is.na(index[i,j])){
-        res.c$input$dat$index[use.index[i],j] <- exp(log(res$input$dat$index[use.index[i],j])+Delta*sigma[i])
-        res11 <- do.call(vpa.hay,res.c$input)
-        res.c$input$dat$index[use.index[i],j] <- exp(log(res$input$dat$index[use.index[i],j])-Delta*sigma[i])
-        res12 <- do.call(vpa.hay,res.c$input)
-
-        ResP[[k]] <- res11
-        ResN[[k]] <- res12
-        k <- k + 1
-        res.c <- res
-      }
-    }
-  }
-
-  list(Delta=Delta,sigma=sigma,res=res, ResP=ResP, ResN=ResN)
-}
-
-sensitivity_plot <- function(
-    sens_res,
-    target="naa",
-    age=0,
-    season=1,
-    year=2022,
-    num_id=1,
-    years=2005:2022,
-    scale=100,
-    fix_ratio=2,
-    range=seq(0,100,len=5),
-    digits=1,
-    absolute=FALSE,
-    max_value=NULL,
-    max_size=10
-){
-  res <- sens_res$res
-  Delta <- sens_res$Delta
-
-  index <- res$input$dat$index
-  use.index <- res$input$use.index
-  if (use.index[1] != "all") index <- index[use.index,]
-
-  sigma <- sens_res$sigma
-
-  impact <- index
-
-  Years <- as.numeric(colnames(index))
-  Ages <- 1:nrow(res$outputs$naa1)-1
-
-  k <- 1
-
-  for (i in 1:nrow(index)){
-    for (j in 1:ncol(index)){
-      if (!is.na(index[i,j])){
-        if (target=="b" | target=="q" | target=="sigma"){
-          resP <- sens_res$ResP[[k]]$opts
-          resN <- sens_res$ResN[[k]]$opts
-          resP <- resP[names(resP)==paste0(target)]
-          resN <- resN[names(resN)==paste0(target)]
-          impact[i,j] <- (log((resP[[1]])[num_id])-log((resN[[1]])[num_id]))/(2*Delta*sigma[i])
-          if (absolute) impact[i,j] <- impact[i,j]*(res$opts[names(res$opts)==paste0(target)][[1]])[num_id]
-        } else {
-          resP <- sens_res$ResP[[k]]$outputs
-          resN <- sens_res$ResN[[k]]$outputs
-
-          resP <- resP[names(resP)==paste0(target,season)]
-          resN <- resN[names(resN)==paste0(target,season)]
-          impact[i,j] <- (log((resP[[1]])[Ages %in% age, Years %in% year])-log((resN[[1]])[Ages %in% age, Years %in% year]))/(2*Delta*sigma[i])
-
-          if (absolute) impact[i,j] <- impact[i,j]*(res$outputs[names(res$outputs)==paste0(target,season)][[1]])[Ages %in% age, Years %in% year]
-        }
-
-        k <- k + 1
-      }
-    }
-  }
-
-  dat <- impact %>% as.data.frame() %>% tibble::rownames_to_column("index") %>% pivot_longer(!index, names_to = "year", values_to = "value") %>% mutate_at(vars(year), as.factor)
-
-  dat <- dat %>% mutate_at(vars(index), as.factor)
-  dat$index <- factor(dat$index, levels=rev(levels(dat$index)))
-
-  range <- range[1:(length(range)-1)]
-
-  dat <- subset(dat, year %in% years)
-
-  colours <- c("blue","red")
-
-  if(is.null(max_value)) max_value <- max(abs(dat$value),na.rm=TRUE)
-
-  if (target=="b" | target=="q" | target=="sigma") {
-    Title <- paste0("target = ",target, ", index = ",num_id)
-    season <- NULL
-    threshold <- ((res$opts)[names(res$opts)==paste0(target)][[1]])[num_id]
-  } else {
-    Title <- paste0("target = ",target, ", season = ",season, ", age = ", age, ", year = ", year)
-    threshold <- ((res$outputs)[names(res$outputs)==paste0(target,season)][[1]])[Ages %in% age, Years %in% year]
-  }
-
-  ggplot(dat,aes(x=year, y=index)) + geom_point(aes(size=abs(value)), fill=colours[sign(dat$value)*0.5+1.5], color=colours[sign(dat$value)*0.5+1.5], alpha = 0.75, shape = 21) + coord_fixed(ratio=fix_ratio) + scale_size_continuous(limits = c(0.0001, 1.0001)*max_value, range = c(1,max_size), breaks = round(range*max_value/scale,digits=digits))+theme_bw() + theme(axis.text.x = element_text(angle = 90, hjust = 1), panel.background = element_blank(), panel.border = element_rect(colour = "black", fill = NA, size = 1.2)) + labs(x="Year", y="Index", size=paste0(target,season),title=Title) + guides(color="none", fill="none")
-}
+#' 半期VPAのブートストラップ法を行う関数
+#'
+#' @details
+#' 半期VPAのスクリプトにあった関数。
+#'
+#' @encoding UTF-8
+#' @export
 
 boot_hvpa <- function(
     res,
@@ -1247,6 +698,15 @@ boot_hvpa <- function(
   list(res=res, boot=Res_boot)
 }
 
+
+#' 半期VPAのブートストラップ法結果の作図関数
+#'
+#' @details
+#' 半期VPAのスクリプトにあった関数。将来的にはplot_bootstrap_vpa関数に移行したい。
+#'
+#' @encoding UTF-8
+#' @export
+
 boot_hvpa_plot <- function(
     res_boot,
     target="naa",
@@ -1309,118 +769,710 @@ boot_hvpa_plot <- function(
   if (out=="dat") list(dat_boot=dat_boot, dat_ci=dat_ci) else print(p1)
 }
 
-out_vpa2 <- function(res=NULL, # VPA result
-                     rres=NULL, # reference point
-                     fres=NULL, # future projection result (not nessesarily)
-                     ABC=NULL,
-                     filename="vpa" # filename without extension
-){
-  old.par <- par()
-  exit.func <- function(){
-    #    par(old.par)
-    dev.off()
-    options(warn=0)
-  }
-  on.exit(exit.func())
 
-  csvname <- paste(filename,".csv",sep="")
-  pdfname <- paste(filename,".pdf",sep="")
-  pdf(pdfname)
-  par(mfrow=c(3,2),mar=c(3,3,2,1))
-  options(warn=-1)
+# hvpa_plot <- function(res,res0=NULL,years=NULL,age=NULL,rel_heights=c(0.7,0.3),labels=c("Abundance","Fishing Rate")){
+#   require(tidyverse)
+#
+#   if (is.null(age)) age <- 0:4
+#
+#   dat <- res$input$dat
+#
+#   caa1 <- dat$caa1
+#   caa2 <- dat$caa2
+#   naa1 <- res$outputs$naa1
+#   naa2 <- res$outputs$naa2
+#
+#   if (!is.null(age)){
+#     Age <- age+1
+#     caa1 <- caa1[Age,,drop=FALSE]
+#     caa2 <- caa2[Age,,drop=FALSE]
+#     naa1 <- naa1[Age,,drop=FALSE]
+#     naa2 <- naa2[Age,,drop=FALSE]
+#   }
+#
+#   caa_all <- rbind(cbind(caa1,caa2),rep(1:ncol(caa1),2))
+#
+#   caa <- caa_all[1:nrow(caa1),order(caa_all[nrow(caa_all),])]
+#
+#   naa_all <- rbind(cbind(naa1,naa2),rep(1:ncol(naa1),2))
+#
+#   naa <- naa_all[1:nrow(naa1),order(naa_all[nrow(naa_all),])]
+#
+#   if (is.null(res0)){
+#
+#     data_for_plot <- data.frame(year=rep(colnames(caa1),each=nrow(caa1)*2),season=rep(c(rep(1,nrow(caa1)),rep(2,nrow(caa1))),ncol(caa1)),age=rep(age,2*ncol(caa1)),caa=as.numeric(unlist(caa)),naa=as.numeric(unlist(naa)))
+#
+#     data_for_plot <- data_for_plot %>% mutate(ys=as.Date(if_else(season==1,paste0(year,"-01-01"),paste0(year,"-06-01"))))
+#
+#     data_for_plot2 <- data_for_plot %>% group_by(year,season) %>% summarize(C=sum(caa),N=sum(naa),ys=mean(ys))
+#   } else {
+#     naa01 <- res0$outputs$naa1
+#     naa02 <- res0$outputs$naa2
+#
+#     if (!is.null(age)){
+#       naa01 <- naa01[Age,,drop=FALSE]
+#       naa02 <- naa02[Age,,drop=FALSE]
+#     }
+#
+#     naa0_all <- rbind(cbind(naa01,naa02),rep(1:ncol(naa01),2))
+#
+#     naa0 <- naa0_all[1:nrow(naa01),order(naa0_all[nrow(naa0_all),])]
+#
+#     data_for_plot <- data.frame(year=rep(colnames(caa1),each=nrow(caa1)*2),season=rep(c(rep(1,nrow(caa1)),rep(2,nrow(caa1))),ncol(caa1)),age=rep(age,2*ncol(caa1)),caa=as.numeric(unlist(caa)),naa=as.numeric(unlist(naa)),naa0=as.numeric(unlist(naa0)))
+#
+#     data_for_plot <- data_for_plot %>% mutate(ys=as.Date(if_else(season==1,paste0(year,"-01-01"),paste0(year,"-06-01"))))
+#
+#     data_for_plot2 <- data_for_plot %>% group_by(year,season) %>% summarize(C=sum(caa),N=sum(naa),N0=sum(naa0),ys=mean(ys))
+#   }
+#
+#   if (!is.null(years)) data_for_plot2 <- subset(data_for_plot2, year %in% years)
+#
+#   p <- ggplot(data_for_plot2, mapping=aes(x=ys, y=N))
+#
+#   p1 <- p + geom_line(size=2)+labs(x="Year", y=labels[1])+theme_bw()
+#
+#   if (!is.null(res0)) p1 <- p1 + geom_line(aes(x=ys, y=N0),size=1,color="blue",linetype="twodash")
+#
+#   pp <- ggplot(data_for_plot2, mapping=aes(x=ys, y=C/N))
+#
+#   pp1 <- pp + geom_line(size=2, color="red")+labs(x="Year", y=labels[2])+theme_bw()
+#
+#   if (!is.null(res0)) pp1 <- pp1 + geom_line(aes(x=ys, y=C/N0),size=1, color="green",linetype="twodash")
+#
+#   cowplot::plot_grid(p1, pp1, nrow=2, rel_heights=rel_heights,align="v")
+# }
+#
+# hvpa_plot2 <- function(res,res0=NULL,years=NULL,age=NULL,rel_heights=c(0.7,0.3),labels=c("Abundance","Fishing Rate")){
+#   require(tidyverse)
+#
+#   if (is.null(age)) age <- 0:4
+#
+#   dat <- res$input$dat
+#
+#   caa1 <- dat$caa1
+#   caa2 <- dat$caa2
+#   naa1 <- res$outputs$naa1
+#   naa2 <- res$outputs$naa2
+#
+#   if (!is.null(age)){
+#     Age <- age+1
+#     caa1 <- caa1[Age,,drop=FALSE]
+#     caa2 <- caa2[Age,,drop=FALSE]
+#     naa1 <- naa1[Age,,drop=FALSE]
+#     naa2 <- naa2[Age,,drop=FALSE]
+#   }
+#
+#   if (is.null(res0)){
+#
+#     data_for_plot <- data.frame(year=rep(colnames(caa1),each=nrow(caa1)),season=rep(c(rep(1,nrow(caa1))),ncol(caa1)),age=rep(age,ncol(caa1)),caa=as.numeric(unlist(caa1+caa2)),naa=as.numeric(unlist(naa1)))
+#
+#     data_for_plot <- data_for_plot %>% mutate(ys=as.Date(paste0(year,"-01-01")))
+#
+#     data_for_plot2 <- data_for_plot %>% group_by(year,season) %>% summarize(C=sum(caa),N=sum(naa),ys=mean(ys))
+#   } else {
+#     naa01 <- res0$naa
+#
+#     if (!is.null(age)){
+#       naa01 <- naa01[Age,,drop=FALSE]
+#     }
+#
+#     data_for_plot <- data.frame(year=rep(colnames(caa1),each=nrow(caa1)),season=rep(c(rep(1,nrow(caa1))),ncol(caa1)),age=rep(age,ncol(caa1)),caa=as.numeric(unlist(caa1+caa2)),naa=as.numeric(unlist(naa1)),naa0=as.numeric(unlist(naa01)))
+#
+#     data_for_plot <- data_for_plot %>% mutate(ys=as.Date(paste0(year,"-01-01")))
+#
+#     data_for_plot2 <- data_for_plot %>% group_by(year,season) %>% summarize(C=sum(caa),N=sum(naa),N0=sum(naa0),ys=mean(ys))
+#   }
+#
+#   if (!is.null(years)) data_for_plot2 <- subset(data_for_plot2, year %in% years)
+#
+#   p <- ggplot(data_for_plot2, mapping=aes(x=ys, y=N))
+#
+#   p1 <- p + geom_line(size=2)+labs(x="Year", y=labels[1])+theme_bw()
+#
+#   if (!is.null(res0)) p1 <- p1 + geom_line(aes(x=ys, y=N0),size=1,color="blue",linetype="twodash")
+#
+#   pp <- ggplot(data_for_plot2, mapping=aes(x=ys, y=C/N))
+#
+#   pp1 <- pp + geom_line(size=2, color="red")+labs(x="Year", y=labels[2])+theme_bw()
+#
+#   if (!is.null(res0)) pp1 <- pp1 + geom_line(aes(x=ys, y=C/N0),size=1, color="green",linetype="twodash")
+#
+#   cowplot::plot_grid(p1, pp1, nrow=2, rel_heights=rel_heights,align="v")
+# }
 
-  write.table2 <- function(x,title.tmp="",is.plot=FALSE,...){
-    if(is.plot){
-      if(!is.null(dim(x))){
-        matplot(colnames(x),t(x),type="b",ylim=c(0,max(x,na.rm=T)),pch=substr(rownames(x),1,1))
-      }
-      else{
-        barplot(x)
-      }
-      title(title.tmp)
-    }
-    if(!is.null(dim(x))){
-      tmp <- matrix("",nrow(x)+1,ncol(x)+1)
-      tmp[-1,-1] <- as.character(unlist(x))
-      tmp[-1,1] <- rownames(x)
-      tmp[1,-1] <- colnames(x)
-    }
-    else{
-      tmp <- x
-    }
-    write.table(tmp,append=T,sep=",",quote=FALSE,file=csvname,col.names=F,row.names=F,...)
-  }
+# make_dat <- function(res){
+#   require(tidyverse)
+#
+#   AR <- res$input$AR
+#
+#   abund <- res$input$abund
+#   index <- res$input$dat$index
+#   use.index <- res$input$use.index
+#   if (use.index[1] != "all") index <- index[use.index,]
+#   ki <- res$input$ki
+#   sel.def <- res$input$sel.def
+#   min.age <- res$input$min.age+1
+#   max.age <- res$input$max.age+1
+#   b_est <- res$input$b_est
+#   if (length(abund) > 1 & length(b_est)==1) b_est <- rep(b_est, length(abund))
+#   p_slide <- res$input$p_slide
+#   if (length(abund) > 1 & length(p_slide)==1) p_slide <- rep(p_slide, length(abund))
+#
+#   waa1 <- res$input$dat$waa1
+#   waa2 <- res$input$dat$waa2
+#   omega1 <- res$input$dat$omega1
+#   omega2 <- res$input$dat$omega2
+#   M <- res$input$dat$M
+#
+#   wf <- res$input$wf
+#   scale <- res$input$scale
+#
+#   faa1 <- res$outputs$faa1
+#   faa2 <- res$outputs$faa2
+#   naa1 <- res$outputs$naa1
+#   naa2 <- res$outputs$naa2
+#   baa1 <- res$outputs$baa1
+#   baa2 <- res$outputs$baa2
+#
+#   b <- res$opts$b
+#   q <- res$opts$q
+#   d <- res$opts$d
+#
+#   X_q <- res$X_q
+#
+#   zzz <- res$zzz
+#
+#   avail <- list()
+#   for (i in 1:nrow(index)){
+#     avail[[i]] <- which(!is.na(as.numeric(index[i,])))
+#   }
+#
+#   waa_new <- res$outputs$waa_new
+#
+#   dat_for_plot <- NULL
+#
+#   for (i in 1:nrow(index)){
+#     if (abund[i]=="Bo"){
+#       if (ki[i]==1){
+#         saa_o1 <- sel.func(zzz*faa1*omega1, def=sel.def)
+#         saa_o1 <- sweep(saa_o1,2,colSums(saa_o1),FUN="/")
+#         pred <- colSums((saa_o1*baa1)[min.age[i]:max.age[i],,drop=FALSE])
+#       }
+#       if (ki[i]==2){
+#         saa_o2 <- sel.func(zzz*faa2*omega2, def=sel.def)
+#         saa_o2 <- sweep(saa_o2,2,colSums(saa_o2),FUN="/")
+#         pred <- colSums((saa_o2*baa2)[min.age[i]:max.age[i],,drop=FALSE])
+#       }
+#     }
+#     if (abund[i]=="N"){
+#       if (ki[i]==1){
+#         pred <- colSums((naa1*exp(-p_slide[i]*(faa1+0.5*M)))[min.age[i]:max.age[i],,drop=FALSE])
+#       }
+#       if (ki[i]==2){
+#         pred <- colSums((naa2*exp(-p_slide[i]*(faa2+0.5*M)))[min.age[i]:max.age[i],,drop=FALSE])
+#       }
+#     }
+#     if (abund[i]=="B"){
+#       if (ki[i]==1){
+#         pred <- colSums((baa1*exp(-p_slide[i]*(faa1+0.5*M)))[min.age[i]:max.age[i],,drop=FALSE])
+#       }
+#       if (ki[i]==2){
+#         pred <- colSums((baa2*exp(-p_slide[i]*(faa2+0.5*M)))[min.age[i]:max.age[i],,drop=FALSE])
+#       }
+#     }
+#     if (abund[i]=="Bf"){
+#       pred <- colSums((baa1)[min.age[i]:max.age[i],,drop=FALSE])
+#       pred_new <- (naa2[,ncol(naa2)]*exp(-1*(faa2[,ncol(naa2)]+0.5*dat$M[,ncol(naa2)])))
+#       pred_new <- sum((waa_new*c(0,pred_new[1:(nrow(naa2)-2)],sum(pred_new[(nrow(naa2)-1):nrow(naa2)])))[min.age[i]:max.age[i]])
+#
+#       pred <- c(pred[-1],pred_new)
+#     }
+#     if (abund[i]=="Nf"){
+#       pred <- colSums((baa1)[min.age[i]:max.age[i],,drop=FALSE])
+#       pred_new <- (naa2[,ncol(naa2)]*exp(-1*(faa2[,ncol(naa2)]+0.5*dat$M[,ncol(naa2)])))
+#       pred_new <- sum((c(0,pred_new[1:(nrow(naa2)-2)],sum(pred_new[(nrow(naa2)-1):nrow(naa2)])))[min.age[i]:max.age[i]])
+#
+#       pred <- c(pred[-1],pred_new)
+#     }
+#
+#     pred <- log(q[i])+d[i]*as.numeric(X_q[i,avail[[i]]])+b[i]*log(as.numeric(pred[avail[[i]]]))
+#
+#     obs <- as.numeric(index[i,avail[[i]]])
+#
+#     dat_for_plot <- rbind(dat_for_plot, data.frame(year=as.numeric(names(index)[avail[[i]]]),num=i,obs=obs,pred=exp(pred)))
+#   }
+#
+#   if (any(AR)) {
+#     rho <- res$opts$rho
+#     resid <- NULL
+#     for (j in 1:nrow(index)){
+#       dat_for_plot_sub <- subset(dat_for_plot, num==j)
+#       n <- nrow(dat_for_plot_sub)
+#       resid <- c(resid,log(dat_for_plot_sub$obs[1])-log(dat_for_plot_sub$pred[1]))
+#       eps <- last(resid)
+#       for (i in 2:n){
+#         resid <- c(resid,log(dat_for_plot_sub$obs[i])-log(dat_for_plot_sub$pred[i])-rho[j]*eps)
+#         eps <- log(dat_for_plot_sub$obs[i])-log(dat_for_plot_sub$pred[i])
+#       }
+#     }
+#     dat_for_plot$residuals <- resid
+#   } else dat_for_plot$residuals <- log(dat_for_plot$obs)-log(dat_for_plot$pred)
+#
+#   return(dat_for_plot)
+# }
 
-  write(paste("# RVPA outputs at ",date()," & ",getwd()),file=csvname)
+# bubble_plot <- function(
+#     res,
+#     target="naa",
+#     season=1,
+#     hanki=TRUE,
+#     years=NULL,
+#     scale=100,
+#     fix_ratio=2,
+#     range=seq(0,100,len=5),
+#     digits=0,
+#     max_size=10
+# ){
+#
+#   if (hanki) res00 <- res$outputs else res00 <- res
+#   dat <- res00[names(res00)==paste0(target,season)]
+#
+#   dat <- dat[[1]] %>% as.data.frame() %>% tibble::rownames_to_column("age") %>% pivot_longer(!age, names_to = "year", values_to = "value") %>% mutate_at(vars(year), as.factor)
+#
+#   dat <- dat %>% mutate_at(vars(age), as.factor)
+#   dat$age <- factor(dat$age, levels=rev(levels(dat$age)))
+#
+#   range <- range[1:(length(range)-1)]
+#
+#   if(!is.null(years)) dat <- subset(dat, year %in% years)
+#
+#   ggplot(dat,aes(x=year, y=age)) + geom_point(aes(size=value, fill=age, color=age), alpha = 0.75, shape = 21) + coord_fixed(ratio=fix_ratio) + scale_size_continuous(limits = c(0.0001, 1.0001)*max(dat$value,na.rm=TRUE), range = c(1,max_size), breaks = round(range*max(dat$value,na.rm=TRUE)/scale,digits=digits))+theme_bw() + theme(axis.text.x = element_text(angle = 90, hjust = 1), panel.background = element_blank(), panel.border = element_rect(colour = "black", fill = NA, size = 1.2)) + labs(x="Year", y="Age",size=paste0(target,season)) + guides(color="none", fill="none")
+# }
+#
+# future_projection <- function(
+#     res,
+#     sr,
+#     Y=20,
+#     beta=1,
+#     scale=1000){
+#
+#   faa1 <- res$outputs$faa1
+#   faa2 <- res$outputs$faa2
+#
+#   nc <- ncol(faa1)
+#
+#   faa1_current <- faa1[,nc]
+#   faa2_current <- faa2[,nc]
+#
+#   caa1 <- res$input$dat$caa1
+#   caa2 <- res$input$dat$caa2
+#   naa1 <- res$outputs$naa1
+#   naa2 <- res$outputs$naa2
+#   maa <- res$input$dat$maa
+#   waa1 <- res$input$dat$waa1/scale
+#   waa2 <- res$input$dat$waa2/scale
+#   SSB <- res$outputs$ssb
+#   M <- res$input$dat$M
+#   ssb_type <- res$input$ssb_type
+#   p_ssb <- res$input$p_ssb
+#   M <- M[,nc]
+#
+#   faaz_current <- -log(1-(caa1[,nc]*exp(M/4)+caa2[,nc]*exp(3/4*M))/naa1[,nc])
+#
+#   a <- SR$pars[1]
+#   b <- SR$pars[2]
+#   SRtype <- SR$input$SR
+#
+#   pred_SR <- function(SSB,SRtype="HS"){
+#     if (SRtype=="HS") out <- as.numeric(a*min(b,colSums(SSB)))
+#     if (SRtype=="BH") out <- as.numeric(a*SSB/(1+b*SSB))
+#     if (SRtype=="RI") out <- as.numeric(a*SSB*exp(-b*SSB))
+#
+#     return(out)
+#   }
+#
+#   nage <- nrow(naa1)
+#
+#   Naa1 <- c(pred_SR(SSB,SRtype=SRtype),naa2[,nc]*exp(-faa2[,nc]-M/2))
+#   Naa1[nage] <- sum(Naa1[nage:(nage+1)])
+#   naa1_f <- as.matrix(Naa1[1:nage],ncol=1)
+#   caa1_f <- caa2_f <- naa2_f <- NULL
+#
+#   Naaz <- Naa1
+#   naaz_f <- naa1_f
+#   caaz_f <- NULL
+#
+#   for (i in 1:Y){
+#     Naa2 <- naa1_f[,i]*exp(-beta*faa1_current-M/2)
+#     Caa1 <- naa1_f[,i]*exp(-M/4)*(1-exp(-beta*faa1_current))
+#     naa2_f <- cbind(naa2_f,Naa2)
+#     caa1_f <- cbind(caa1_f,Caa1)
+#     if (ssb_type==1) {
+#       SSB <- Naa1*maa*waa2
+#       SSBz <- Naaz*maa*waa2
+#     }
+#     if (ssb_type==2) {
+#       SSB <- Naa2*maa_ssb*waa_ssb*exp(-p_ssb*M)
+#       SSBz <- Naaz*maa_ssb*waa_ssb*exp(-p_ssb*M)
+#     }
+#     if (ssb_type==3) {
+#       SSB <- Naa2*maa*waa2*exp(-beta*faa2_current-0.5*M)
+#       SSBz <- Naaz*maa*waa2*exp(-beta*faaz_current-M)
+#     }
+#     Naa1 <- c(pred_SR(SSB,SRtype=SRtype),naa2_f[,i]*exp(-beta*faa2_current-M/2))
+#     Naa1[nage] <- sum(Naa1[nage:(nage+1)])
+#     Naa1 <- Naa1[1:nage]
+#     Caa2 <- naa2_f[,i]*exp(-M/4)*(1-exp(-beta*faa2_current))
+#     naa1_f <- cbind(naa1_f,Naa1)
+#     caa2_f <- cbind(caa2_f,Caa2)
+#
+#     Naaz <- c(pred_SR(SSBz,SRtype=SRtype),naaz_f[,i]*exp(-beta*faaz_current-M))
+#     Naaz[nage] <- sum(Naaz[nage:(nage+1)])
+#     Naaz <- Naaz[1:nage]
+#     Caaz <- naaz_f[,i]*exp(-M/2)*(1-exp(-beta*faaz_current))
+#
+#     naaz_f <- cbind(naaz_f, Naaz)
+#     caaz_f <- cbind(caaz_f,Caaz)
+#   }
+#
+#   naa1_f <- naa1_f[,1:Y]
+#   naaz_f <- naaz_f[,1:Y]
+#
+#   years <- as.numeric(colnames(naa1)[nc])+1:Y
+#
+#   colnames(naa1_f) <- colnames(naa2_f) <- colnames(naaz_f) <- colnames(caa1_f) <- colnames(caa2_f) <- colnames(caaz_f) <- years
+#
+#   list(faa1_current=faa1_current,faa2_current=faa2_current,faaz_current=faaz_current,naa1_f=naa1_f, naa2_f=naa2_f, caa1_f=caa1_f, caa2_f=caa2_f, caa12_f=caa1_f+caa2_f, naaz_f=naaz_f, caaz_f=caaz_f)
+# }
+#
+# jackknife_test <- function(res){
+#   index <- res$input$dat$index
+#   use.index <- res$input$use.index
+#   if (use.index[1] != "all") index <- index[use.index,]
+#
+#   res.c <- res
+#
+#   ResJ <- list()
+#
+#   k <- 1
+#
+#   for (i in 1:nrow(index)){
+#     for (j in 1:ncol(index)){
+#       if (!is.na(index[i,j])){
+#         res.c$input$dat$index[use.index[i],j] <- NA
+#         res11 <- do.call(vpa.hay,res.c$input)
+#
+#         ResJ[[k]] <- res11
+#         k <- k + 1
+#         res.c <- res
+#       }
+#     }
+#   }
+#
+#   list(res=res,ResJ=ResJ)
+# }
+#
+# jackknife_plot <- function(
+#     jack_res,
+#     target="naa",
+#     age=0,
+#     season=1,
+#     num_id=1,
+#     year=2022,
+#     years=2005:2022,
+#     scale=100,
+#     fix_ratio=2,
+#     range=seq(0,100,len=5),
+#     digits=1,
+#     absolute=FALSE,
+#     max_value=NULL,
+#     max_size=10
+# ){
+#   res <- jack_res$res
+#
+#   index <- res$input$dat$index
+#   use.index <- res$input$use.index
+#   if (use.index[1] != "all") index <- index[use.index,]
+#
+#   impact <- index
+#
+#   Years <- as.numeric(colnames(index))
+#   Ages <- 1:nrow(res$outputs$naa1)-1
+#
+#   k <- 1
+#
+#   for (i in 1:nrow(index)){
+#     for (j in 1:ncol(index)){
+#       if (!is.na(index[i,j])){
+#         if (target=="b" | target=="q" | target=="sigma"){
+#           resJ <- jack_res$ResJ[[k]]$opts
+#           resJ <- resJ[names(resJ)==paste0(target)]
+#           impact[i,j] <- (resJ[[1]])[num_id]
+#         } else {
+#           resJ <- jack_res$ResJ[[k]]$outputs
+#           resJ <- resJ[names(resJ)==paste0(target,season)]
+#           impact[i,j] <- (resJ[[1]])[Ages %in% age, Years %in% year]
+#         }
+#
+#         k <- k + 1
+#       }
+#     }
+#   }
+#
+#   dat <- impact %>% as.data.frame() %>% tibble::rownames_to_column("index") %>% pivot_longer(!index, names_to = "year", values_to = "value") %>% mutate_at(vars(year), as.factor)
+#
+#   dat <- dat %>% mutate_at(vars(index), as.factor)
+#   dat$index <- factor(dat$index, levels=rev(levels(dat$index)))
+#
+#   range <- range[1:(length(range)-1)]
+#
+#   dat <- subset(dat, year %in% years)
+#
+#   colours <- c("blue","red")
+#
+#   if(is.null(max_value)) max_value <- max(abs(dat$value),na.rm=TRUE)
+#
+#   if (target=="b" | target=="q" | target=="sigma") {
+#     Title <- paste0("target = ",target, ", index = ",num_id)
+#     season <- NULL
+#     threshold <- ((res$opts)[names(res$opts)==paste0(target)][[1]])[num_id]
+#   } else {
+#     Title <- paste0("target = ",target, ", season = ",season, ", age = ", age, ", year = ", year)
+#     threshold <- ((res$outputs)[names(res$outputs)==paste0(target,season)][[1]])[Ages %in% age, Years %in% year]
+#   }
+#
+#   ggplot(dat,aes(x=year, y=index)) + geom_point(aes(size=abs(value)), fill=colours[(dat$value > threshold)*0.5+1.5], color=colours[(dat$value > threshold)*0.5+1.5], alpha = 0.75, shape = 21) + coord_fixed(ratio=fix_ratio) + scale_size_continuous(limits = c(0.0001, 1.0001)*max_value, range = c(1,max_size), breaks = round(range*max_value/scale,digits=digits))+theme_bw() + theme(axis.text.x = element_text(angle = 90, hjust = 1), panel.background = element_blank(), panel.border = element_rect(colour = "black", fill = NA, size = 1.2)) + labs(x="Year", y="Index", size=paste0(target,season),title=Title) + guides(color="none", fill="none")
+# }
+#
+# sensitivity_test <- function(res,Delta=2,SD=NULL){
+#   index <- res$input$dat$index
+#   use.index <- res$input$use.index
+#   if (use.index[1] != "all") index <- index[use.index,]
+#
+#   sigma <- res$opts$sigma
+#   if(!is.null(SD)) sigma <- rep(SD,length(sigma))
+#
+#   res.c <- res
+#
+#   ResP <- ResN <- list()
+#
+#   k <- 1
+#
+#   for (i in 1:nrow(index)){
+#     for (j in 1:ncol(index)){
+#       if (!is.na(index[i,j])){
+#         res.c$input$dat$index[use.index[i],j] <- exp(log(res$input$dat$index[use.index[i],j])+Delta*sigma[i])
+#         res11 <- do.call(vpa.hay,res.c$input)
+#         res.c$input$dat$index[use.index[i],j] <- exp(log(res$input$dat$index[use.index[i],j])-Delta*sigma[i])
+#         res12 <- do.call(vpa.hay,res.c$input)
+#
+#         ResP[[k]] <- res11
+#         ResN[[k]] <- res12
+#         k <- k + 1
+#         res.c <- res
+#       }
+#     }
+#   }
+#
+#   list(Delta=Delta,sigma=sigma,res=res, ResP=ResP, ResN=ResN)
+# }
+#
+# sensitivity_plot <- function(
+#     sens_res,
+#     target="naa",
+#     age=0,
+#     season=1,
+#     year=2022,
+#     num_id=1,
+#     years=2005:2022,
+#     scale=100,
+#     fix_ratio=2,
+#     range=seq(0,100,len=5),
+#     digits=1,
+#     absolute=FALSE,
+#     max_value=NULL,
+#     max_size=10
+# ){
+#   res <- sens_res$res
+#   Delta <- sens_res$Delta
+#
+#   index <- res$input$dat$index
+#   use.index <- res$input$use.index
+#   if (use.index[1] != "all") index <- index[use.index,]
+#
+#   sigma <- sens_res$sigma
+#
+#   impact <- index
+#
+#   Years <- as.numeric(colnames(index))
+#   Ages <- 1:nrow(res$outputs$naa1)-1
+#
+#   k <- 1
+#
+#   for (i in 1:nrow(index)){
+#     for (j in 1:ncol(index)){
+#       if (!is.na(index[i,j])){
+#         if (target=="b" | target=="q" | target=="sigma"){
+#           resP <- sens_res$ResP[[k]]$opts
+#           resN <- sens_res$ResN[[k]]$opts
+#           resP <- resP[names(resP)==paste0(target)]
+#           resN <- resN[names(resN)==paste0(target)]
+#           impact[i,j] <- (log((resP[[1]])[num_id])-log((resN[[1]])[num_id]))/(2*Delta*sigma[i])
+#           if (absolute) impact[i,j] <- impact[i,j]*(res$opts[names(res$opts)==paste0(target)][[1]])[num_id]
+#         } else {
+#           resP <- sens_res$ResP[[k]]$outputs
+#           resN <- sens_res$ResN[[k]]$outputs
+#
+#           resP <- resP[names(resP)==paste0(target,season)]
+#           resN <- resN[names(resN)==paste0(target,season)]
+#           impact[i,j] <- (log((resP[[1]])[Ages %in% age, Years %in% year])-log((resN[[1]])[Ages %in% age, Years %in% year]))/(2*Delta*sigma[i])
+#
+#           if (absolute) impact[i,j] <- impact[i,j]*(res$outputs[names(res$outputs)==paste0(target,season)][[1]])[Ages %in% age, Years %in% year]
+#         }
+#
+#         k <- k + 1
+#       }
+#     }
+#   }
+#
+#   dat <- impact %>% as.data.frame() %>% tibble::rownames_to_column("index") %>% pivot_longer(!index, names_to = "year", values_to = "value") %>% mutate_at(vars(year), as.factor)
+#
+#   dat <- dat %>% mutate_at(vars(index), as.factor)
+#   dat$index <- factor(dat$index, levels=rev(levels(dat$index)))
+#
+#   range <- range[1:(length(range)-1)]
+#
+#   dat <- subset(dat, year %in% years)
+#
+#   colours <- c("blue","red")
+#
+#   if(is.null(max_value)) max_value <- max(abs(dat$value),na.rm=TRUE)
+#
+#   if (target=="b" | target=="q" | target=="sigma") {
+#     Title <- paste0("target = ",target, ", index = ",num_id)
+#     season <- NULL
+#     threshold <- ((res$opts)[names(res$opts)==paste0(target)][[1]])[num_id]
+#   } else {
+#     Title <- paste0("target = ",target, ", season = ",season, ", age = ", age, ", year = ", year)
+#     threshold <- ((res$outputs)[names(res$outputs)==paste0(target,season)][[1]])[Ages %in% age, Years %in% year]
+#   }
+#
+#   ggplot(dat,aes(x=year, y=index)) + geom_point(aes(size=abs(value)), fill=colours[sign(dat$value)*0.5+1.5], color=colours[sign(dat$value)*0.5+1.5], alpha = 0.75, shape = 21) + coord_fixed(ratio=fix_ratio) + scale_size_continuous(limits = c(0.0001, 1.0001)*max_value, range = c(1,max_size), breaks = round(range*max_value/scale,digits=digits))+theme_bw() + theme(axis.text.x = element_text(angle = 90, hjust = 1), panel.background = element_blank(), panel.border = element_rect(colour = "black", fill = NA, size = 1.2)) + labs(x="Year", y="Index", size=paste0(target,season),title=Title) + guides(color="none", fill="none")
+# }
 
-  if(!is.null(res)){
-    write("# VPA results",file=csvname, append=T)
 
-    write("\n# catch at age 1",file=csvname,append=T)
-    write.table2(res$input$dat$caa1,title.tmp="Catch at age1")
-
-    write("\n# catch at age 2",file=csvname,append=T)
-    write.table2(res$input$dat$caa2,title.tmp="Catch at age2")
-
-    write("\n# maturity at age",file=csvname,append=T)
-    write.table2(res$input$dat$maa,title.tmp="Maturity at age")
-
-    write("\n# weight at age",file=csvname,append=T)
-    write.table2(res$input$dat$waa,title.tmp="Weight at age")
-
-    write("\n# M at age",file=csvname,append=T)
-    write.table2(res$input$dat$M,title.tmp="M at age")
-
-    write("\n# fishing mortality at age 1",file=csvname,append=T)
-    write.table2(res$outputs$faa1,title.tmp="F at age1")
-
-    write("\n# fishing mortality at age 2",file=csvname,append=T)
-    write.table2(res$outputs$faa2,title.tmp="F at age2")
-
-    #    write("\n# Current F",file=csvname,append=T)
-    #    write.table2(res$Fc.at.age,title.tmp="Current F")
-
-    write("\n# numbers at age 1",file=csvname,append=T)
-    write.table2(res$outputs$naa1,title.tmp="Numbers at age1")
-
-    write("\n# numbers at age 1",file=csvname,append=T)
-    write.table2(res$outputs$naa2,title.tmp="Numbers at age1")
-
-    write("\n# total and spawning biomass ",file=csvname,append=T)
-    x <- rbind(colSums(res$ssb),colSums(res$outputs$baa1),colSums(res$outputs$baa2),colSums(res$input$dat$caa1*res$input$dat$waa1),colSums(res$input$dat$caa2*res$input$dat$waa2))
-    rownames(x) <- c("Spawning biomass","Total biomass 1","Total biomass 2","Catch biomass 1","Catch biomass 2")
-    write.table2(x,title.tmp="Total and spawning biomass")
-  }
-
-  if(!is.null(rres)){
-    write("\n# Reference points",file=csvname,append=T)
-    write.table2(rres$summary,title.tmp="Future F at age",is.plot=F)
-  }
-
-  if(!is.null(fres)){
-    write("\n# future projection results",file=csvname,append=T)
-    write("\n# future F at age",file=csvname,append=T)
-    write.table2(fres$faa[,,1],title.tmp="Future F at age")
-
-    write("\n# future numbers at age",file=csvname,append=T)
-    write.table2(fres$naa[,,1],title.tmp="Future numbers at age")
-
-    write("\n# future total and spawning biomass",file=csvname,append=T)
-    x <- rbind(fres$vssb[,1],fres$vbiom[,1],fres$vwcaa[,1])
-    rownames(x) <- c("Spawning biomass","Total biomass","Catch biomass")
-    write.table2(x,title.tmp="Future total, spawning and catch biomass")
-  }
-
-  if(!is.null(ABC)){
-    write("\n# ABC summary",file=csvname,append=T)
-    write.table2(ABC$ABC,title.tmp="Future F at age",is.plot=F)
-    write("\n# Kobe matrix",file=csvname,append=T)
-    for(i in 1:dim(ABC$kobe.matrix)[[3]]){
-      write(paste("\n# ",dimnames(ABC$kobe.matrix)[[3]][i]),
-            file=csvname,append=T)
-      write.table2(ABC$kobe.matrix[,,i],
-                   title.tmp=dimnames(ABC$kobe.matrix)[[3]][i],is.plot=T)
-    }
-  }
-}
-
+# out_vpa2 <- function(res=NULL, # VPA result
+#                      rres=NULL, # reference point
+#                      fres=NULL, # future projection result (not nessesarily)
+#                      ABC=NULL,
+#                      filename="vpa" # filename without extension
+# ){
+#   old.par <- par()
+#   exit.func <- function(){
+#     #    par(old.par)
+#     dev.off()
+#     options(warn=0)
+#   }
+#   on.exit(exit.func())
+#
+#   csvname <- paste(filename,".csv",sep="")
+#   pdfname <- paste(filename,".pdf",sep="")
+#   pdf(pdfname)
+#   par(mfrow=c(3,2),mar=c(3,3,2,1))
+#   options(warn=-1)
+#
+#   write.table2 <- function(x,title.tmp="",is.plot=FALSE,...){
+#     if(is.plot){
+#       if(!is.null(dim(x))){
+#         matplot(colnames(x),t(x),type="b",ylim=c(0,max(x,na.rm=T)),pch=substr(rownames(x),1,1))
+#       }
+#       else{
+#         barplot(x)
+#       }
+#       title(title.tmp)
+#     }
+#     if(!is.null(dim(x))){
+#       tmp <- matrix("",nrow(x)+1,ncol(x)+1)
+#       tmp[-1,-1] <- as.character(unlist(x))
+#       tmp[-1,1] <- rownames(x)
+#       tmp[1,-1] <- colnames(x)
+#     }
+#     else{
+#       tmp <- x
+#     }
+#     write.table(tmp,append=T,sep=",",quote=FALSE,file=csvname,col.names=F,row.names=F,...)
+#   }
+#
+#   write(paste("# RVPA outputs at ",date()," & ",getwd()),file=csvname)
+#
+#   if(!is.null(res)){
+#     write("# VPA results",file=csvname, append=T)
+#
+#     write("\n# catch at age 1",file=csvname,append=T)
+#     write.table2(res$input$dat$caa1,title.tmp="Catch at age1")
+#
+#     write("\n# catch at age 2",file=csvname,append=T)
+#     write.table2(res$input$dat$caa2,title.tmp="Catch at age2")
+#
+#     write("\n# maturity at age",file=csvname,append=T)
+#     write.table2(res$input$dat$maa,title.tmp="Maturity at age")
+#
+#     write("\n# weight at age",file=csvname,append=T)
+#     write.table2(res$input$dat$waa,title.tmp="Weight at age")
+#
+#     write("\n# M at age",file=csvname,append=T)
+#     write.table2(res$input$dat$M,title.tmp="M at age")
+#
+#     write("\n# fishing mortality at age 1",file=csvname,append=T)
+#     write.table2(res$outputs$faa1,title.tmp="F at age1")
+#
+#     write("\n# fishing mortality at age 2",file=csvname,append=T)
+#     write.table2(res$outputs$faa2,title.tmp="F at age2")
+#
+#     #    write("\n# Current F",file=csvname,append=T)
+#     #    write.table2(res$Fc.at.age,title.tmp="Current F")
+#
+#     write("\n# numbers at age 1",file=csvname,append=T)
+#     write.table2(res$outputs$naa1,title.tmp="Numbers at age1")
+#
+#     write("\n# numbers at age 1",file=csvname,append=T)
+#     write.table2(res$outputs$naa2,title.tmp="Numbers at age1")
+#
+#     write("\n# total and spawning biomass ",file=csvname,append=T)
+#     x <- rbind(colSums(res$ssb),colSums(res$outputs$baa1),colSums(res$outputs$baa2),colSums(res$input$dat$caa1*res$input$dat$waa1),colSums(res$input$dat$caa2*res$input$dat$waa2))
+#     rownames(x) <- c("Spawning biomass","Total biomass 1","Total biomass 2","Catch biomass 1","Catch biomass 2")
+#     write.table2(x,title.tmp="Total and spawning biomass")
+#   }
+#
+#   if(!is.null(rres)){
+#     write("\n# Reference points",file=csvname,append=T)
+#     write.table2(rres$summary,title.tmp="Future F at age",is.plot=F)
+#   }
+#
+#   if(!is.null(fres)){
+#     write("\n# future projection results",file=csvname,append=T)
+#     write("\n# future F at age",file=csvname,append=T)
+#     write.table2(fres$faa[,,1],title.tmp="Future F at age")
+#
+#     write("\n# future numbers at age",file=csvname,append=T)
+#     write.table2(fres$naa[,,1],title.tmp="Future numbers at age")
+#
+#     write("\n# future total and spawning biomass",file=csvname,append=T)
+#     x <- rbind(fres$vssb[,1],fres$vbiom[,1],fres$vwcaa[,1])
+#     rownames(x) <- c("Spawning biomass","Total biomass","Catch biomass")
+#     write.table2(x,title.tmp="Future total, spawning and catch biomass")
+#   }
+#
+#   if(!is.null(ABC)){
+#     write("\n# ABC summary",file=csvname,append=T)
+#     write.table2(ABC$ABC,title.tmp="Future F at age",is.plot=F)
+#     write("\n# Kobe matrix",file=csvname,append=T)
+#     for(i in 1:dim(ABC$kobe.matrix)[[3]]){
+#       write(paste("\n# ",dimnames(ABC$kobe.matrix)[[3]][i]),
+#             file=csvname,append=T)
+#       write.table2(ABC$kobe.matrix[,,i],
+#                    title.tmp=dimnames(ABC$kobe.matrix)[[3]][i],is.plot=T)
+#     }
+#   }
+# }
+#
