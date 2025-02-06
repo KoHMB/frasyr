@@ -44,8 +44,14 @@ test_that("bootstrap using use.index options", {
   testinput_use.index <- res_vpa_estb$input
   testinput_use.index$use.index <- 1:5
   testvpa <- do.call(vpa, testinput_use.index) # ここは必ず動きそうなのでdo.call使ってます
-  expect_equal("list", boo.vpa(testvpa, B = 2) %>% class)
-                                               # 時間削減でB=2（目的はエラーが出ないことのテスト）
+
+  # plot_resboot_vpaをテストすればboo.vpaも自動的にカバーされるため、変更
+  #expect_equal("list", boo.vpa(testvpa, B = 2) %>% class)
+  expect_equal("list", plot_resboot_vpa(testvpa, B_ite = 2) %>% class)
+  # 時間削減でB=2（目的はエラーが出ないことのテスト）
+
+  # do_caaboot_vpaのテストも追加
+  expect_equal("list", do_caaboot_vpa(res_vpa_estb, B_ite=3) %>% class)
 })
 
 
