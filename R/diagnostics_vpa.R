@@ -1399,3 +1399,36 @@ do_caaboot_vpa <-  function(res,
   if(detail==TRUE) obj_return$res_boot <- res_list
   return(obj_return)
 } # function(do_caaboot_vpa)
+
+
+#'
+#' bootstrapの個々の結果に再生産関係をあてはめる
+#'
+#' @param resboot boot.vpaからの返り値(vpaからの返り値のリスト)
+#' @param res_vpa オリジナルのVPAの結果
+#' @param type モデル選択の方法。"auto"とすると、３種類のSR関数、ARあり（inner）、なし、L1、L2の総当りから、AICcが最も小さいものを選択する。NULLの場合は、fit.SRに与える引数を別途与えることで、モデルを指定する
+#'
+#' @export
+
+
+do_bootSR <- function(resboot, res_vpa, type=NULL, ...){
+  SRdata_list <- purrr::map(resboot,     get.SRdata, weight.year=NULL)
+  if(is.null(type)){
+    SRres_list  <- purrr::map(SRdata_list,
+                              function(x) fit.SR(x, plus_group=res_vpa$input$plus.group, ...))
+  }
+  else{
+    for(i in 1:length(resboot)){
+      AICtable <- tryall_SR(SRdata_list[[1]],
+                            detail=TRUE,
+                            plus_group=res_vpa$input$plus.group)
+      AICtable <- AICtable %>% dplyr::filter(AR.type!="outer") %>%
+        arrange(AICc) %>%
+        mutate(delta=AICc-min(AICc)) %>%
+        dplyr::filter(delta<0.01)
+      if(nrow(AICtable)>1 && AICtable$SR.rel)
+
+    }
+  }
+  
+}
